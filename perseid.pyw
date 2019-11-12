@@ -5,6 +5,7 @@ import os
 import time
 
 from tkinter import filedialog
+from tkinter import messagebox
 from tkinter import ttk
 from tkinter import *
 import matplotlib.pyplot as plt
@@ -98,7 +99,42 @@ def main():
     row += 1
 
     def power_plot():
+        try:
+            bw = float(str_bw.get()) * 1E3
+        except:
+            messagebox.showerror("Error", "Bad bandwidth setting.")
+            return
+        if bw <= 0:
+            messagebox.showerror("Error", "Bandwidth must be greater than zero.")
+            return
+
+        try:
+            dt = float(str_power_dt.get())
+        except:
+            messagebox.showerror("Error", "Bad temporal resolution setting.")
+            return
+        if dt <= 0:
+            messagebox.showerror("Error", "Temporal resolution must be greater than zero.")
+            return
+
+        try:
+            notch_bw = float(str_power_notch_bw.get())
+        except:
+            messagebox.showerror("Error", "Bad center notch filter bandwidth setting.")
+            return
+        if notch_bw <= 0:
+            messagebox.showerror("Error", "Center notch filter bandwidth setting must be greater than zero.")
+            return
+
+        n = int(str_power_n.get())
+
+        index_dt = int(dt*bw)
+        mag = []
+        iq_len = os.path.getsize(str_iq_file.get()) // 8
+        f = open(str_iq_file.get(), "rb")
+
         win_progress = Toplevel()
+        win_progress.attributes('-type', 'dialog')
         win_progress.grab_set()
         win_progress.title("Power plot")
         lbl_step = Label(win_progress)
@@ -106,20 +142,7 @@ def main():
         progress = ttk.Progressbar(win_progress, orient=HORIZONTAL, length=100, mode='determinate')
         progress.grid(column=0, row=1, pady=(0, 5), padx=(5, 5))
 
-        lbl_step.configure(text="Loading")
-        win_progress.update()
-        window.update()
-
-        bw = float(str_bw.get()) * 1E3
-        dt = float(str_power_dt.get())
-        notch_bw = float(str_power_notch_bw.get())
-        n = int(str_power_n.get())
-
-        index_dt = int(dt*bw)
-        mag = []
         next_win_update = time.time() + 0.2
-        iq_len = os.path.getsize(str_iq_file.get()) // 8
-        f = open(str_iq_file.get(), "rb")
 
         for i in range(int(iq_len//index_dt)):
             if time.time() > next_win_update:
@@ -136,9 +159,7 @@ def main():
                 fft[j] = -np.Inf
             mag.append(max(fft) - np.median(fft))
 
-        lbl_step.configure(text="Plotting")
-        win_progress.update()
-        window.update()
+        win_progress.destroy()
 
         plt.figure()
         plt.title(str_iq_file.get())
@@ -147,8 +168,6 @@ def main():
         t = np.arange(0, iq_len/bw, dt)
         plt.plot(t[:len(mag)], mag)
         plt.show()
-
-        win_progress.destroy()
 
     btn_power_plot = Button(window, text="Power plot", command=power_plot)
     btn_power_plot.grid(column=1, row=row, pady=(5, 5))
@@ -197,32 +216,51 @@ def main():
     row += 1
 
     def spectrogram_plot():
-        win_progress = Toplevel()
-        win_progress.grab_set()
-        win_progress.title("Spectrogram plot")
-        lbl_step = Label(win_progress)
-        lbl_step.grid(column=0, row=0, pady=(5, 5), padx=(5, 5))
-        progress = ttk.Progressbar(win_progress, orient=HORIZONTAL, length=100, mode='determinate')
-        progress.grid(column=0, row=1, pady=(0, 5), padx=(5, 5))
+        try:
+            bw = float(str_bw.get()) * 1E3
+        except:
+            messagebox.showerror("Error", "Bad bandwidth setting.")
+            return
+        if bw <= 0:
+            messagebox.showerror("Error", "Bandwidth must be greater than zero.")
+            return
 
-        lbl_step.configure(text="Loading")
-        win_progress.update()
-        window.update()
+        try:
+            t0 = float(str_spectrogram_t0.get())
+        except:
+            messagebox.showerror("Error", "Bad start time.")
+            return
+        if t0 < 0:
+            messagebox.showerror("Error", "Start time cannot be negative.")
+            return
 
-        bw = float(str_bw.get()) * 1E3
-        t0 = float(str_spectrogram_t0.get())
-        t1 = float(str_spectrogram_t1.get())
+        try:
+            t1 = float(str_spectrogram_t1.get())
+        except:
+            messagebox.showerror("Error", "Bad end time.")
+            return
+        if t1 <= t0:
+            messagebox.showerror("Error", "End time must be greater than start time.")
+            return
+
+        iq_len = os.path.getsize(str_iq_file.get()) // 8
 
         index_t0 = int(t0*bw)
+        if index_t0 >= iq_len:
+            messagebox.showerror("Error", "Start time is beyond the data.")
+            return
+
         index_t1 = int(t1*bw)
+        if index_t1 <= index_t0:
+            messagebox.showerror("Error", "End time must be greater than start time.")
+            return
+        if index_t1 > iq_len:
+            messagebox.showerror("Error", "End time is beyond the data.")
+            return
 
         f = open(str_iq_file.get(), "rb")
         f.seek(index_t0*8)
         iq_slice = np.fromfile(f, np.complex64, count=index_t1-index_t0)
-
-        lbl_step.configure(text="Plotting")
-        win_progress.update()
-        window.update()
 
         plt.figure()
         NFFT = int(str_spectrogram_N.get())
@@ -241,8 +279,6 @@ def main():
         im.set_clim(vmin=vmin, vmax=vmax)
         plt.colorbar(im).set_label("Power (dB)")
         plt.show()
-
-        win_progress.destroy()
 
     btn_spectrogram_plot = Button(window, text="Spectrogram plot", command=spectrogram_plot)
     btn_spectrogram_plot.grid(column=1, row=row, pady=(5, 5))
