@@ -129,7 +129,7 @@ def main():
         n = int(str_power_n.get())
 
         index_dt = int(dt*bw)
-        mag = []
+        power = []
         iq_len = os.path.getsize(str_iq_file.get()) // 8
         f = open(str_iq_file.get(), "rb")
 
@@ -145,19 +145,28 @@ def main():
         next_win_update = time.time() + 0.2
 
         for i in range(int(iq_len//index_dt)):
+
             if time.time() > next_win_update:
                 lbl_step.configure(text=f"Crunching FFT ({i}/{iq_len//index_dt})")
                 progress.config(mode="determinate",maximum=iq_len//index_dt, value=i)
                 win_progress.update()
                 window.update()
                 next_win_update += 0.2
+
             f.seek(i*index_dt*8)
+
+            # Load a chunk of the data for processing.
             iq_slice = np.fromfile(f, np.complex64, count=index_dt)
+
+            # Find the spectrum of the chunk.
             fft = 20 * np.log10(np.abs(np.fft.fftshift(np.fft.fft(iq_slice, n=n))))
+
+            # Notch out the center frequency.
             blank = notch_bw/bw*len(fft)
             for j in range(int(len(fft)/2-blank/2), int(len(fft)/2+blank/2)):
                 fft[j] = -np.Inf
-            mag.append(max(fft) - np.median(fft))
+
+            power.append(max(fft) - np.median(fft))
 
         win_progress.destroy()
 
@@ -166,7 +175,7 @@ def main():
         plt.xlabel("Time (sec)")
         plt.ylabel("Power (dB)")
         t = np.arange(0, iq_len/bw, dt)
-        plt.plot(t[:len(mag)], mag)
+        plt.plot(t[:len(power)], power)
         plt.show()
 
     btn_power_plot = Button(window, text="Power plot", command=power_plot)
@@ -268,15 +277,11 @@ def main():
         plt.ylabel("Doppler shift (Hz)")
         plt.xlabel("Time (sec)")
 
+        # Rescale the plot's colors so that the median noise power is black.
         vmin = 10*math.log10(np.median(Pxx))
-
-        vmax = -np.Inf
-        for p in Pxx:
-            if max(p) > vmax:
-                vmax = max(p)
-        vmax = 10*math.log10(vmax)
-
+        vmax = 10*math.log10(np.max(Pxx))
         im.set_clim(vmin=vmin, vmax=vmax)
+
         plt.colorbar(im).set_label("Power (dB)")
         plt.show()
 
