@@ -134,7 +134,10 @@ def main():
         f = open(str_iq_file.get(), "rb")
 
         win_progress = Toplevel()
-        win_progress.attributes('-type', 'dialog')
+
+        # This causes a crash on Windows?
+        #win_progress.attributes('-type', 'dialog')
+
         win_progress.grab_set()
         win_progress.title("Power plot")
         lbl_step = Label(win_progress)
