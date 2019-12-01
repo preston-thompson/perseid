@@ -273,7 +273,8 @@ def main():
 
         plt.figure()
         NFFT = int(str_spectrogram_N.get())
-        Pxx, freqs, bins, im = plt.specgram(iq_slice, NFFT=NFFT, Fs=bw, noverlap=NFFT/2, cmap=plt.get_cmap("magma"))
+        Pxx, freqs, bins, im = plt.specgram(iq_slice, NFFT=NFFT, Fs=bw, noverlap=NFFT/2, cmap=plt.get_cmap("magma"), xextent=(t0,t1))
+
         plt.ylabel("Doppler shift (Hz)")
         plt.xlabel("Time (sec)")
 
