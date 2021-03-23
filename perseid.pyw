@@ -8,10 +8,13 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter import *
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 def main():
+    matplotlib.use('TKagg')
+
     plt.ion()
 
     window = Tk()
@@ -20,7 +23,7 @@ def main():
 
     row = 0
 
-    lbl_power = Label(window, text="IQ file settings", font="Helvetica 11 bold")
+    lbl_power = Label(window, text="Files:", font="Helvetica 11 bold")
     lbl_power.grid(column=1, row=row)
 
     row += 1
@@ -274,7 +277,7 @@ def main():
         f.seek(index_t0*8)
         iq_slice = np.fromfile(f, np.complex64, count=index_t1-index_t0)
 
-        plt.figure()
+        plt.figure(figsize=(10, 10))
         NFFT = int(str_spectrogram_N.get())
         Pxx, freqs, bins, im = plt.specgram(iq_slice, NFFT=NFFT, Fs=bw, noverlap=NFFT/2, cmap=plt.get_cmap("magma"), xextent=(t0,t1))
 
